@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 定义名字空间 -->
+<mapper namespace="weibo">
+    <!-- 定义insert语句(增) -->
+    <insert id="insert">
+        INSERT INTO weibo VALUES(#{id},#{username},#{password})
+    </insert>
+
+    <!-- 定义查询操作(单个查询) -->
+    <select id="selectOne" resultType="com.ZJin.mysql.User">
+        SELECT * FROM weibo WHERE username=#{username} AND password=#{password}
+    </select>
+
+    <!-- 根据用户名查找id -->
+    <select id="selectIdByUsername" resultType="int">
+        SELECT id FROM weibo WHERE username=#{username} AND password=#{password}
+    </select>
+
+    <!-- 根据id查找用户名 -->
+    <select id="selectUsernameById" resultType="String">
+        SELECT username FROM weibo WHERE id=#{id}
+    </select>
+
+    <!--&lt;!&ndash; 查询多个 &ndash;&gt;-->
+    <!--<select id="selectAll" resultType="com.ZJin.web.jdbc.User">-->
+    <!--SELECT * from users-->
+    <!--</select>-->
+    <!--&lt;!&ndash; 查询部分 &ndash;&gt;-->
+    <!--<select id="selectPart" resultType="com.ZJin.web.jdbc.User">-->
+    <!--SELECT * FROM users WHERE id BETWEEN #{start} AND #{end}-->
+    <!--</select>-->
+</mapper>

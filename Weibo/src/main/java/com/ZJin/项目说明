@@ -1,0 +1,82 @@
+1.先初始化命名空间和三张表(Content/Relations/RCEmail)，如果没有就创建
+
+2.三张表的数据结构分别为：
+    内容表(Content)数据结构
+            列族名：info
+            rowkey：发布微博用户id+时间
+            列名：content
+            value：发布的内容
+    用户关系表(Relations)数据结构
+            列族名：attends
+            rowkey：A关注B,则rk=A_id+time
+            列名：attends_id
+            value：B_id
+E:\DateByBD\src\apache-flume-1.8.0-src\flume-ng-sinks\MyProject\Weibo
+            列族名：fans
+            rowkey：A成为B的粉丝,则rk=B_id+time
+            列名：fans_id
+            value：A_id
+    微博邮箱表(RCEmail)数据结构
+            列族名：info
+            rowkey：粉丝id
+            列名：粉丝id+关注人发动态的时间
+            value：发布微博用户id+时间，也就是content表的rowkey，
+                  后面可以根据这个rowkey查看对应的value，也就是动态内容
+
+3.功能描述
+    发布微博内容
+        a、微博内容表(Content)中添加1条数据
+        b、微博收件箱表(RCEmail)对所有粉丝用户添加数据
+    添加关注用户
+        a、在微博用户关系表中，对当前主动操作的用户添加新关注的好友
+        b、在微博用户关系表中，对被关注的用户添加新的粉丝
+        c、微博收件箱表中添加所关注的用户发布的微博
+    移除（取关）用户
+        a、在微博用户关系表中，对当前主动操作的用户移除取关的好友(attends)
+        b、在微博用户关系表中，对被取关的用户移除粉丝
+        c、微博收件箱中删除取关的用户发布的微博
+    获取关注的人的微博内容
+        a、从微博收件箱中获取所关注的用户的微博RowKey
+        b、根据获取的RowKey，得到微博内容
+
+4.需要完善的地方
+    1.每次的查找几乎都是通过table_E.getScanner(new Scan());全部遍历一遍，当用户过多，这样会很影响效率
+    2.完成关注模块，主要是通过搜索别人，如果这个人已经关注了，那么显示已关注，如果这个人没关注，给一个关注的链接
+    3.现在只能输入英文动态，完善中文输入
+    4.完善注册时候用户名中文
+    5.完善页面
+
+5.疑问：
+    <form action="/userTest?uid=${uid}" method="get">
+        <textarea rows="5" cols="100" name="msg"></textarea><input type="submit" value="发表">
+        <a href="/userTest?uid=${uid}">提交</a>
+    </form>
+    当链接是form的形式时，那么他只能接收name="msg"的值，也就是从该页面获取的内容
+    当链接是href形式时，他只能接收?uid=${uid}这种形式的参数，也就是从其他页面传过来的内容
+    那么我两种都要怎么办啊？
+
+    解决：
+        第一种方法：在获取uid的Mapping中设置一个request,把uid放进session中，
+                @RequestMapping("/showPage")
+                public String showPage(HttpServletRequest request){
+                    HttpSession session = request.getSession();
+                    session.setAttribute("uid",uid);
+                }
+                然后在其他需要uid的页面直接通过以下操作获得：
+                @RequestMapping("/userTest")
+                public String userTest(HttpServletRequest request){
+                    HttpSession session = request.getSession();
+                    String uid = (String)session.getAttribute("uid");
+                }
+            分析：把共享信息放进会话，那么在整个页面框架下都可以获取
+        第二种方法：通过创建一个隐藏标签，value值就是uid的值
+            <input type="text" name="uid" hidden value="${uid}">
+            注意：hidden不能写在value之后
+        总结：由于session有可能有时间限制，所以还是推荐第二种
+
+6.收获
+    1.hbase在进行批量删除操作(也许其他操作也一样)时，如果时间戳一样，那么他只会删除一条数据，要避免数据的时间戳相同可以通过以下
+      命令执行插入语句：
+        put_E.addColumn(Bytes.toBytes("info"),Bytes.toBytes(colName),System.currentTimeMillis(),rowkey_C);
+      每次插入用的都是系统的时间，这样他的时间戳一定不相同
+    2.用mybatis做查询操作时，必须指定返回类型，更新操作可以不用
